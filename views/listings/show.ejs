@@ -13,8 +13,14 @@
         <li>&#8377;<%= listing.price %></li>
         <li><%= listing.location %></li>
         <li><%= listing.country %></li>
-        <a href="/listings/<%= listing._id%>/edit">Edit this listing</a>
     </ul>
+    <br>
+    <a href="/listings/<%= listing._id%>/edit">Edit this listing</a>
+    <br>
+    <br>
+    <form method="post" action="/listings/<%= listing._id %>?_method=DELETE">
+        <button>Delete this listing</button>
+    </form>
 
 </body>
 </html>
