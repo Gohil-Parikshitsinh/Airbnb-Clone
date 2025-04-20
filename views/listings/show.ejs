@@ -25,7 +25,7 @@
 
 <div class="col-8 offset-3">
   <h4>Leave a Review</h4>
-  <form action="/listings/<%= listing.id %>/reviews" method="post" class="needs-validation">
+  <form action="/listings/<%= listing._id %>/reviews" method="post" class="needs-validation">
     <div class="mb-3 mt-3">
       <label for="rating" class="form-label">Rating</label>
       <input type="range" name="review[rating]" id="rating" max="5" min="1" />
@@ -39,10 +39,28 @@
         rows="5"
         >Comment</label
       >
-      <textarea required name="review[commetn]" id="comment"></textarea>
+      <textarea required name="review[comment]" id="comment"></textarea>
     </div>
     <button class="btn btn-outline-dark">Submit</button>
   </form>
+
+  <hr>
+
+  <h4>All Reviews</h4>
+   <ul>
+      <% for(review of listing.reviews ) {%>
+      <div class="card col-5 ms-3 mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Jane Doe</h5>
+          <p class="card-text"> <%= review.comment %></p>
+          <p class="card-text"> <%= review.rating %>stars</p>
+          <form action="/listings/<%=listing._id%>/reviews/<%= review._id %>?_method=DELETE" method="post" class="mb-3">
+            <button class="btn btn-btn-sm btn-dark">Delete</button>
+          </form>
+        </div>
+      </div>
+      <% } %>
+    </ul>
 </div>
 
 <script src="/js/script.js"></script>

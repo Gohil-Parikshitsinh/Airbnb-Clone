@@ -1,16 +1,20 @@
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-const wrapAsync = require("./utils/wrapAsync.js")
 const ExpressError = require("./utils/ExpressError.js")
-const {listingSchema} = require("./schema.js");
-const Review  = require("./models/review.js");
 
+const listingsRouter = require("./routes/listings.js");
+const reviewsRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
+const session = require("express-session");
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js")
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
@@ -32,90 +36,53 @@ app.use(methodOverride("_method"));
 app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname,"/public")));
 
-
-const validateListing = (req,res,next)=>{
-  let {error} = listingSchema.validate(req.body);
-  if (error) {
-    let errMsg = error.details.map((el)=>el.message).join(",")
-    throw new ExpressError(400, errMsg);
-    // throw new ExpressError(400, result.error);
-  } else{
-    next()
+const sessionOptions = {
+  secret: "mysupersecretcode",
+  resave: false,
+  saveUninitialized: true,
+  cookie:{
+    expires: Date.now() + 7*24*60*60*1000,
+    maxAge: 7*24*60*60*1000,
+    httpOnly: true,
   }
-}
+};
+
 app.get("/", (req, res) => {
   res.send("Hi, i am root");
 });
 
-//Index Route
-app.get("/listings", async (req,res)=>{
-  const allListing = await Listing.find({});
-  res.render("listings/index.ejs",{allListing});
+
+app.use(session(sessionOptions))
+app.use(flash())
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+
+app.use((req,res,next)=>{
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  res.locals.currUser = req.user;
+  next();
 })
 
+// app.get("/demouser", async(req,res)=>{
+//   let fakeUser = new User({
+//     email: "testUser@gmail.com",
+//     username: "delta-student"
+//   })
 
-// New Route
-app.get("/listings/new",(req,res)=>{
-  res.render("listings/new.ejs")
-})
+//   let registeredUser = await User.register(fakeUser,"helloworld")
+//   res.send(registeredUser);
+// })
 
-//Show Route
-app.get("/listings/:id", async (req,res)=>{
-  let {id} = req.params;
-  const listing = await Listing.findById(id);
-  res.render("listings/show.ejs",{listing});
-})
-
-//Create Route
-app.post("/listings",validateListing, wrapAsync(async (req,res)=>{
-  // let {title,description,image,price,country,location} = req.body;
-  // let listing = req.body.listing;
-  // listingSchema.validate(req.body);
-  // console.log(result);
-  const newListing = new Listing(req.body.listing);
-  await newListing.save();
-  res.redirect("/listings")
-  // console.log(listing);
-}));
-
-//Edit Route
-app.get("/listings/:id/edit",async (req,res)=>{
-  let {id} = req.params;
-  const listing = await Listing.findById(id);
-  res.render("listings/edit.ejs",{listing});
-})
-
-//Update Route
-app.put("/listings/:id", async (req,res)=>{
-  let {id} = req.params;
-  await Listing.findByIdAndUpdate(id,{...req.body.listing});
-  res.redirect(`/listings/${id}`);
-})
-
-//Delete Route
-app.delete("/listings/:id", async (req,res)=>{
-  let {id} = req.params;
-  const deletedListing = await Listing.findByIdAndDelete(id);
-  console.log(deletedListing);
-  res.redirect("/listings")
-  
-})
-
-//review
-//post route
-app.post("/listings/:id/reviews", async (req,res)=>{
-  let listing = await Listing.findById(req.params.id)
-  let newReview = new Review(req.body.review)
-
-  listing.reviews.push(newReview)
-
-  await newReview.save();
-  await listing.save();
-
-  console.log("new review saved");
-  res.send("new review saved");
-  
-})
+app.use("/listings",listingsRouter)
+app.use("/listings/:id/reviews",reviewsRouter)
+app.use("/",userRouter)
 
 // app.get("/testListing", async (req, res) => {
 //   let sampleListing = new Listing({
@@ -139,7 +106,7 @@ app.use((err,req,res,next)=>{
   let {statusCode=500, message="Someting went wrong"} = err;
   // res.send("someting went wrong")
   // res.status(statusCode).send(message);
-  res.render("error.ejs")
+  res.render("listings/error.ejs")
 })
 app.listen(8080, () => {
   console.log("Server is listing at port 8080");
