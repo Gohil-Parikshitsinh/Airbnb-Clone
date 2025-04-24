@@ -9,7 +9,7 @@ const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js")
-
+const MongoStore = require('connect-mongo')
 const listingsRouter = require("./routes/listings.js");
 const reviewsRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
@@ -20,7 +20,8 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js")
 
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+// const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+const dbURL = process.env.ATLASDB_URL;
 
 main()
   .then(() => {
@@ -30,7 +31,12 @@ main()
     console.log(err);
   });
 async function main() {
-  await mongoose.connect(MONGO_URL);
+  // await mongoose.connect(MONGO_URL);
+  await mongoose.connect(dbURL,{
+    useNewUrlParser: true,
+  useUnifiedTopology: true,
+
+  });
 }
 
 app.set("view engine","ejs");
@@ -40,7 +46,22 @@ app.use(methodOverride("_method"));
 app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname,"/public")));
 
+const store = MongoStore.create({
+  // mongoUrl: MONGO_URL,
+  mongoUrl: dbURL,
+  crypto:{
+    secret: "mysupersecretcode"
+  },
+  touchAfter:24*3600,
+});
+
+store.on("error",()=>{
+  console.log("ERROR in MONGO SESSION STORE",err);
+})
+
 const sessionOptions = {
+  // store: store
+  store,
   secret: "mysupersecretcode",
   resave: false,
   saveUninitialized: true,

@@ -1,5 +1,10 @@
+const User = require('../models/user'); // Add this line
+
 module.exports.signup = async (req, res) => {
+  console.log("Signup form data:", req.body); 
     try {
+      console.log("Signup route hit");
+      
       let { username, email, password } = req.body;
       const newUser = new User({ email, username });
       const registeredUser = await User.register(newUser, password);
